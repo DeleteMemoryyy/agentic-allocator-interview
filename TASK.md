@@ -7,7 +7,7 @@
 - **物理 block chain**：用 block size 与 `prev_size` 覆盖整个 heap；它是 authoritative state；
 - **segregated free bins**：按 size class 索引空闲 block；它是为了加速搜索而维护的 derived state。
 
-混合 `malloc/free/realloc/calloc`、内存压力和失败返回组合出现时，线上观察到“物理上仍有空闲空间，但后续请求无法找到”的现象。现有 checker 也可能把损坏状态判为正常。Starter 通过全部公开测试，但至少存在一条真实状态转换缺陷，checker 也不满足完整合同。
+混合 `malloc/free/realloc/calloc`、内存压力和失败返回组合出现时，线上观察到后续分配结果具有异常的历史依赖：逻辑上等价的 workload 可能得到不同结果，而现有 checker 仍可能判为正常。Telemetry 无法确认问题来自物理 chain、派生索引，还是 API 边界处理。Starter 通过全部公开测试，但至少存在一条真实状态转换缺陷，checker 也不满足完整合同。
 
 你的任务不是重写整个 allocator，而是在现有实现上完成以下交付：
 
