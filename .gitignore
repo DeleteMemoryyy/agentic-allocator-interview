@@ -2,3 +2,6 @@ build/
 *.dSYM/
 *.o
 .DS_Store
+__pycache__/
+*.pyc
+submission.zip

@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "taskId": "durable-dispatch-protocol-v2",
+  "baseRevision": "takeover-pr-v2",
+  "deliveryProfile": "undecided",
+  "tooling": {
+    "primary": "fill-before-submit",
+    "model": "fill-before-submit",
+    "subagentsUsed": false,
+    "maxConcurrentAgents": 1
+  }
+}

@@ -1,50 +1,44 @@
-# Private PR 提交流程
+# Private PR / Snapshot 提交流程
 
-公开模板只用于分发题目，禁止把解答 PR 发到公开仓库。
+Public repository 只用于分发初始题目。不要向 public upstream 提交解答。
 
-## 1. 创建私有仓库
+## 面试前：创建 private workspace
 
 打开：
 
 <https://github.com/new?template_owner=DeleteMemoryyy&template_name=agentic-allocator-interview&visibility=private>
 
-确认 Visibility 为 **Private**。建议仓库名 `allocator-interview-<your-name>`。
-
-## 2. 邀请面试官
-
-在你的私有仓库进入 `Settings → Collaborators → Add people`，邀请面试官账号：
-
-```text
-DeleteMemoryyy
-```
-
-面试官接受邀请后才能看到 PR 和 commit。不要把仓库临时改成 Public。
-
-## 3. 建 Draft PR
+确认 Visibility 为 **Private**，并邀请面试官账号 `DeleteMemoryyy` 为 collaborator。
 
 ```bash
 git checkout -b solution
 git push -u origin solution
 ```
 
-在该私有仓库内创建 `solution -> main` 的 **Draft pull request**。PR 描述按模板填写 Agent 分工和验证证据。
+在你的 private repo 内创建 `solution -> main` Draft PR。以上准备不占 20 分钟实现时间；若权限或网络受阻，直接使用面试官提供的 zip，不要消耗任务时间排查 GitHub。
 
-## 4. 两次冻结
+## 20:00：冻结
 
-25:00 前：
+听到 freeze 后立即停止修改代码、测试、`submission.json` 和 `HANDOFF.md`。传输和打包可以继续，但只能复制已经冻结的 bytes。
+
+推荐：
 
 ```bash
-./verify-public.sh
-git add allocator.c heap_checker.c candidate.trace decision.md
-git commit -m "phase-a: allocator recovery"
+sh ./verify.sh
+python3 package_submission.py
+git add workspace HANDOFF.md submission.json
+git commit -m "freeze interview delivery"
 git push
-git rev-parse HEAD
 ```
 
-把输出 SHA 填入 PR 的 Phase A 区域。Phase A SHA 冻结后不要 rebase 或 force-push。
+把 `submission.zip` 附到 Draft PR，或告知面试官 PR 已冻结。PR head 本身会记录 revision，因此不要求手抄 Commit SHA；不要在 freeze 后 amend、rebase、force-push 或补修。
 
-43:00 前提交 Final commit，再把 Final SHA 写入同一 PR。保留两个 commit，方便面试官 Review 你如何根据反馈纠错。
+最终交付至少应包含：
 
-## 5. 无法使用 GitHub 时
+- `workspace/`
+- `HANDOFF.md`
+- `submission.json`
 
-将四个允许修改的文件放入同一目录后压缩交给面试官。时间点和两个版本仍需保留；不要附带 `.git`、build 目录或 Agent 对话记录。
+## GitHub 不可用时
+
+直接运行 `python3 package_submission.py` 并上传 `submission.zip`。如果打包脚本失败，可以压缩上述三个项目；不要附带 `.git`、cache、build 目录或 Agent transcript。

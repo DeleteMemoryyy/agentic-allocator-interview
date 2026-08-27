@@ -1,132 +1,64 @@
-# 题目：Agentic Allocator Incident V2
+# Durable Dispatch Protocol — Takeover Task
 
-## 1. 事故背景
+你正在接管一个由 Coding Agent 提交、但尚未获准合并的 PR。它为后台 Job Runner 增加了幂等提交，公开 happy-path tests 已经通过；reviewer 仍不确定状态所有权、并发 admission、失败恢复和交付证据是否足够。
 
-服务内有一个只管理固定内存区间的 allocator。它同时维护两种表示：
+你的目标不是从零重写系统，也不是找出指定数量的 bug。你有 20 分钟，把当前交付推进到一个你愿意负责的状态：可以保留、缩小、重写或回退已有实现，但最终 snapshot 必须可验证，并准确表达它选择了什么、拒绝了什么和还承担什么风险。
 
-- **物理 block chain**：用 block size 与 `prev_size` 覆盖整个 heap；它是 authoritative state；
-- **segregated free bins**：按 size class 索引空闲 block；它是为了加速搜索而维护的 derived state。
+先阅读 `CONTEXT.md` 中的领域词汇。调用接口目前是：
 
-混合 `malloc/free/realloc/calloc`、内存压力和失败返回组合出现时，线上观察到后续分配结果具有异常的历史依赖：逻辑上等价的 workload 可能得到不同结果，而现有 checker 仍可能判为正常。Telemetry 无法确认问题来自物理 chain、派生索引，还是 API 边界处理。Starter 通过全部公开测试，但至少存在一条真实状态转换缺陷，checker 也不满足完整合同。
+```python
+job = service.submit(
+    tenant_id="tenant-a",
+    idempotency_key="request-42",
+    payload="build release",
+)
+```
 
-你的任务不是重写整个 allocator，而是在现有实现上完成以下交付：
+## Stage 1 已公开合同
 
-1. 修复 `allocator.c` 中会破坏合同的状态转换；
-2. 补全 `heap_checker.c`，让它能独立验证任意 `heap_snapshot_t`；
-3. 编写一个最多 40 步的 `candidate.trace`，通过你的实现，并尽可能击穿隐藏的 plausible mutations；
-4. 在 `decision.md` 记录状态模型、Agent Review、Phase A 后的假设变化和剩余风险。
+1. idempotency scope 是 `(tenant_id, idempotency_key)`。同 scope、同 payload 的重试必须返回同一个 job id；不同 tenant 互不影响；
+2. 同 scope 的 key 携带不同 payload 时必须抛出已有的 `IdempotencyConflict`，且不能产生新的持久状态或 dispatch；
+3. `JobService` 和 `JobStore` wrapper 都可能重建。只有共享的 backend repository state 可被视为 authoritative；
+4. 已成功 dispatch 的逻辑请求不能再次 dispatch；
+5. 继承的 `DispatchError` 表示 dispatcher **确定没有接受**本次请求。service 应抛出 `DispatchUnavailable`，保留同一个 pending job，后续重试可以再次 dispatch；
+6. 不同 wrapper 可能并发提交同一个逻辑请求。最终只能有一个 durable job；成功路径不能产生两个外部 dispatch；
+7. admission 热路径不得调用 `all_jobs()` 或通过全量扫描寻找 key；
+8. 只能使用 Python 标准库，本地验证必须在一分钟内完成。
 
-## 2. 必须保持的合同
+## 三个阶段
 
-### 2.1 固定堆与 block
+- **Stage 1 · Takeover（0–7 分钟）**：阅读当前实现和证据，决定保留、重写或回退哪些部分，并开始推进；
+- **Stage 2 · Incident Update（第 7 分钟）**：面试官会发送一份新的生产证据与合同澄清；
+- **Stage 3 · Release Gate（第 14 分钟）**：面试官会发送最终交付门槛；
+- **第 20 分钟**：冻结并发送交付快照。
 
-- allocator 只能使用 `allocator_init` 提供的 heap；不得调用系统 `malloc/calloc/realloc/free`；
-- heap 起始地址及所有返回 payload 均为 16-byte aligned；
-- 物理 block size 包含 header，必须是 16 的倍数且至少为 32 bytes；
-- 所有物理 block 必须无缝、无重叠地覆盖完整 heap；
-- 除第一个 block 外，`prev_size` 必须等于前一个物理 block 的 size；
-- 相邻 free block 必须及时 coalesce。
+后续更新不会推翻已经公开的合同，但会补充当前尚未定义的 dispatch outcome。不要假设 judge、reviewer 或面试官可以与你的 Agent 通信，也不会获得隐藏测试反馈。
 
-### 2.2 API 语义
+## 允许修改
 
-- `allocator_malloc(0)` 返回 `NULL`；无法满足或 size 计算溢出时返回 `NULL`；
-- `allocator_free(NULL)` 无操作。测试只会传入当前有效 allocation 的起始地址；
-- `allocator_realloc(NULL, n)` 等价于 malloc；`allocator_realloc(p, 0)` 释放并返回 `NULL`；
-- realloc 成功时保留 `min(old_payload, new_size)` 字节；
-- realloc 失败必须具备 **failure atomicity**：旧 allocation 的地址、内容和全部 allocator 元数据保持可用且一致；
-- calloc 乘法溢出时返回 `NULL`；成功时 payload 全部清零。
+- `workspace/jobrunner/` 下的实现（后续 release profile 会约束允许改变的 public seam）；
+- 在 `workspace/tests/` 中新增测试；
+- `HANDOFF.md`；
+- `submission.json` 中明确允许填写的字段。
 
-### 2.3 Free-bin 派生索引
+`verify.sh`、`package_submission.py`、`CONTEXT.md`、既有 `test_public.py` 和任务/阶段文档视为合同，不应修改。
 
-对 snapshot 中的 free bins，`heap_check` 必须证明：
+## 本地验证
 
-- 每个物理 free block 恰好出现一次；
-- allocated block 不得出现在 bin 中；
-- block 位于 `heap_bin_for(block.size)` 指定的 size class；
-- `free_prev_offset/free_next_offset` 双向链接互相一致；
-- 所有 offset 指向真实 block 起点且在 heap 内；
-- 链表无环；损坏输入也必须有界终止，不能越界访问或无限循环。
+```bash
+sh ./verify.sh
+```
 
-`heap_check` 接收的是独立 snapshot。它不能调用 allocator、依赖 allocator 私有全局变量、修改 snapshot，或因为“这个状态正常实现不会产生”而跳过检查。
+Starter 通过公开验证，这只能说明当前 PR 的 happy path 可运行。公开测试不是完整评分器，也不会在现场返回 hidden feedback。
 
-### 2.4 搜索预算
+`MemoryJobBackend` 是真实持久层的进程内替身。不要把它误解成生产存储实现；它存在是为了让 wrapper 生命周期、原子 admission 和状态转换可以被确定性测试。
 
-`allocator_probe_count()` 表示 `find_fit` 自上次 reset 后实际检查过的 free-list node 数。每检查一个候选 node 必须计一次。隐藏测试会在固定 workload 上设置确定性上限；禁止伪造或绕过计数。
+## 最终交付
 
-## 3. 可修改与不可修改
+推荐运行：
 
-只允许修改：
+```bash
+python3 package_submission.py
+```
 
-- `allocator.c`
-- `heap_checker.c`
-- `candidate.trace`
-- `decision.md`
-
-不得：
-
-- 修改头文件、runner、公开测试或 CI 来改变合同；
-- 使用系统分配器、扩大 heap、把 allocation 放到 heap 外；
-- 让 checker 恒定返回成功，或让 probe counter 不反映真实搜索；
-- 针对已知 trace、固定行号或某几个 size 硬编码；
-- 提交生成物、Agent 日志、隐藏判题输出或公开解答。
-
-## 4. Candidate trace
-
-`candidate.trace` 最多 40 个非注释操作。合法指令已列在模板中。它必须：
-
-- 在你的实现上通过；
-- 包含具体可解释的反例，而不是无目的堆砌操作；
-- 尽可能让隐藏的错误实现失败。
-
-隐藏 judge 会把同一条 trace 分别运行在多种单故障 mutation 上，只返回击杀数量，不返回 mutation 名称。Phase A 至少击杀 3 个，Final 至少击杀 5 个；参考解不是满分要求，但更高击杀数会体现在评分中。
-
-## 5. Agent 使用规则
-
-- 允许使用 Codex、Claude Code 等 Coding Agent，同时最多两个；
-- 可以异步做代码审查、模型推导、测试设计或实现，但要在 Draft PR 描述中写清任务拆分；
-- 不要求上交完整对话；需要指出至少一处你**没有直接接受**的 Agent 建议，以及如何验证；
-- 候选人本人对最终 diff、测试和解释负责。
-
-## 6. 判题协议
-
-### Public
-
-`./verify-public.sh` 给出具体测试名和诊断。Starter 本来就应为绿色。
-
-### Phase A（25:00）
-
-面试官对冻结 SHA 运行一次隐藏判题。返回：
-
-- PASS/FAIL；
-- 最多两个粗粒度失败维度，例如 `allocator-state`、`checker-soundness`、`candidate-evidence`；
-- candidate trace 的 operation count、mutation 击杀数与门槛。
-
-不会返回隐藏 case、触发 size、mutation 名称或正确 patch。
-
-### Final（43:00）
-
-除 Phase A 项目外，再运行 sanitizer 随机压力与 search-budget workload。最终机器门槛：
-
-- 所有 public/private runtime checks 通过；
-- checker soundness 通过；
-- trace 在本人实现通过且至少击杀 5 个 mutation；
-- stress 与 search budget 通过；
-- `decision.md` 已实质填写。
-
-机器 PASS 不是面试自动通过；47–60 分钟仍会做人工代码与架构 Review。
-
-## 7. 评分（100）
-
-机器 60 分：
-
-- API、隐藏状态转换与 failure atomicity：20；
-- checker soundness：15；
-- candidate trace 与 mutation score：15；
-- sanitizer stress 与搜索预算：10。
-
-人工 40 分：
-
-- authoritative/derived state 建模与 invariant：10；
-- Agent 拆分、diff Review 与验证证据：10；
-- Phase A → Final 的纠错过程：10；
-- 修复边界、复杂度、剩余风险与表达：10。
+它会生成 `submission.zip`。也可以提交一个能恢复相同工作区的稳定 Git ref 或 PR revision。`HANDOFF.md` 可以完全由 Agent 起草，但其中的事实必须与实际 diff 和可重放结果一致。

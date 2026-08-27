@@ -10,8 +10,8 @@ permissions:
 jobs:
   public-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 2
     steps:
       - uses: actions/checkout@v4
       - name: Run public verifier
-        run: ./verify-public.sh
+        run: sh ./verify.sh

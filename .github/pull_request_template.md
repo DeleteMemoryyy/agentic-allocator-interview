@@ -1,23 +1,29 @@
-## Submission checkpoints
+## Frozen delivery
 
-- Phase A SHA (25:00):
-- Final SHA (43:00):
+- [ ] This PR head is the minute-20 frozen snapshot.
+- [ ] No code, tests, metadata, or Handoff were changed after freeze.
+- `submission.zip` attachment or locator (optional):
 
-## Agent task split
+## Delivery decision
 
-- Agent 1:
-- Agent 2 (if used):
-- What I reviewed/rewrote/rejected myself:
+- Declared `deliveryProfile`:
+- Merge recommendation:
+- Public Seam changed:
+- Rejected alternative and accepted cost:
 
 ## Verification
 
-- [ ] `./verify-public.sh`
-- [ ] `candidate.trace` is at most 40 operations
-- [ ] Only the four allowed files changed
-- [ ] `decision.md` is complete
+- [ ] `sh ./verify.sh`
+- Test count/result:
+- Candidate-added discriminating evidence:
 
-## Phase A feedback and correction
+## Agent workflow metadata
 
-- Feedback dimensions:
-- Assumption that changed:
-- Final evidence:
+- Primary tool/model:
+- Sub-agents used:
+- Maximum concurrency:
+
+## Reviewer notes
+
+- Most important residual risk:
+- Smallest safe rollback:
