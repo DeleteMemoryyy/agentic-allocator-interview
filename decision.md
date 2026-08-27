@@ -1,6 +1,17 @@
-# Decision（300 字以内）
+# Decision record
 
-- 核心 invariant：
-- Agent 建议：采纳/重写/拒绝了什么，为什么：
-- Phase A → Final 的错误假设变化：
-- 仍未证明的风险：
+## Authoritative state and invariants
+
+TODO: write the source of truth and the invariants connecting it to the derived index.
+
+## Agent review and chosen repair
+
+TODO: record one suggestion you accepted, rewrote, or rejected, and the evidence used.
+
+## Phase A correction
+
+TODO: describe which assumption changed after private feedback. Write "not run yet" before Phase A.
+
+## Remaining risk
+
+TODO: list what your tests and reasoning still do not prove.

@@ -1,2 +1,17 @@
-# 在这里提交一个最小反例。
-# 它应在你的最终实现上通过，并让原始 starter 失败。
+# Add at most 40 non-comment operations.
+# The trace must pass your implementation and distinguish it from hidden
+# plausible-but-wrong allocator implementations.
+#
+# Supported operations:
+#   alloc ID BYTES
+#   calloc ID COUNT BYTES
+#   realloc ID BYTES
+#   expect_null_realloc ID BYTES
+#   free ID
+#   expect_null_alloc BYTES
+#   expect_null_calloc COUNT BYTES
+#   reset_probes
+#   expect_probes_le COUNT
+#   check
+
+check

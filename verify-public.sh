@@ -1,13 +1,24 @@
 #!/bin/sh
 set -eu
-script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+workspace=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 build_dir=$(mktemp -d "${TMPDIR:-/tmp}/allocator-public.XXXXXX")
 trap 'rm -rf "$build_dir"' EXIT INT TERM
-cc=${CC:-clang}
-"$cc" -std=c11 -Wall -Wextra -Werror -O1 -g -fsanitize=address,undefined \
-  -I "$script_dir" "$script_dir/allocator.c" "$script_dir/public_runner.c" \
+compiler=${CC:-clang}
+
+"$compiler" -std=c11 -O1 -g -Wall -Wextra -Werror \
+  -fsanitize=address,undefined -I"$workspace" \
+  "$workspace/allocator.c" "$workspace/heap_checker.c" "$workspace/runner.c" \
   -o "$build_dir/runner"
-for trace in "$script_dir"/public-tests/*.trace; do
-  "$build_dir/runner" "$trace"
+
+for trace in "$workspace"/public-tests/*.trace; do
+  ASAN_OPTIONS=detect_leaks=0:halt_on_error=1 "$build_dir/runner" "$trace"
 done
-echo "PUBLIC PASS"
+
+"$compiler" -std=c11 -O1 -g -Wall -Wextra -Werror \
+  -fsanitize=address,undefined -I"$workspace" \
+  "$workspace/heap_checker.c" "$workspace/checker_smoke.c" \
+  -o "$build_dir/checker-smoke"
+ASAN_OPTIONS=detect_leaks=0:halt_on_error=1 "$build_dir/checker-smoke"
+
+printf '%s\n' 'PUBLIC VERIFICATION PASS'

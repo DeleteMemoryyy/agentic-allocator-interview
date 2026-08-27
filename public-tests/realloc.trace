@@ -1,11 +1,10 @@
-# Public realloc cases deliberately avoid the small-splinter boundary.
+# Public realloc cases cover legal splits and an in-place grow that can commit.
 alloc 0 160
 alloc 1 128
-realloc 0 64
+alloc 2 64
 free 1
-realloc 0 1024
-alloc 2 80
-realloc 2 4096
-free 0
+realloc 0 240
+realloc 0 96
 free 2
+free 0
 check

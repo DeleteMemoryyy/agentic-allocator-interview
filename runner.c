@@ -1,13 +1,12 @@
 #include "allocator.h"
 
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define HEAP_SIZE (64u * 1024u)
-#define MAX_IDS 256
+#define HEAP_SIZE (256u * 1024u)
+#define MAX_IDS 2048
 
 typedef struct {
     unsigned char *ptr;
@@ -33,9 +32,7 @@ static int valid_id(int id) {
 
 static int check_bytes(int id) {
     for (size_t i = 0; i < slots[id].requested; ++i) {
-        if (slots[id].ptr[i] != pattern(id, i)) {
-            return 0;
-        }
+        if (slots[id].ptr[i] != pattern(id, i)) return 0;
     }
     return 1;
 }
@@ -47,29 +44,21 @@ static void fill_bytes(int id) {
 }
 
 static int validate_all(int line) {
-    if (!allocator_check()) {
-        return fail("heap-invariant", line, "allocator_check_rejected_heap");
-    }
+    if (!allocator_check()) return fail("heap-or-index-invariant", line, "checker_rejected_state");
     for (int i = 0; i < MAX_IDS; ++i) {
         if (!slots[i].live) continue;
         uintptr_t lo = (uintptr_t)slots[i].ptr;
         uintptr_t hi = lo + slots[i].requested;
-        if ((lo % 16u) != 0) {
-            return fail("alignment", line, "payload_not_16_byte_aligned");
-        }
-        if (lo < (uintptr_t)heap || hi > (uintptr_t)heap + HEAP_SIZE || hi < lo) {
+        if ((lo % ALLOCATOR_ALIGNMENT) != 0) return fail("alignment", line, "payload_alignment");
+        if (lo < (uintptr_t)heap || hi < lo || hi > (uintptr_t)heap + HEAP_SIZE) {
             return fail("heap-range", line, "payload_outside_heap");
         }
-        if (!check_bytes(i)) {
-            return fail("payload-corruption", line, "live_payload_changed");
-        }
+        if (!check_bytes(i)) return fail("payload-corruption", line, "live_payload_changed");
         for (int j = i + 1; j < MAX_IDS; ++j) {
             if (!slots[j].live) continue;
             uintptr_t other_lo = (uintptr_t)slots[j].ptr;
             uintptr_t other_hi = other_lo + slots[j].requested;
-            if (lo < other_hi && other_lo < hi) {
-                return fail("overlap", line, "live_payloads_overlap");
-            }
+            if (lo < other_hi && other_lo < hi) return fail("overlap", line, "live_payloads_overlap");
         }
     }
     return 0;
@@ -93,35 +82,39 @@ int main(int argc, char **argv) {
 
     char linebuf[512];
     int line = 0;
+    size_t operation_count = 0;
     while (fgets(linebuf, sizeof(linebuf), input)) {
         ++line;
         char *cursor = linebuf;
         while (*cursor == ' ' || *cursor == '\t') ++cursor;
         if (*cursor == '\0' || *cursor == '\n' || *cursor == '#') continue;
+        if (++operation_count > 200000u) {
+            fclose(input); return fail("trace-budget", line, "too_many_operations");
+        }
 
-        char op[40];
+        char op[48];
         int id;
         size_t a, b;
-        if (sscanf(cursor, "%39s", op) != 1) continue;
+        if (sscanf(cursor, "%47s", op) != 1) continue;
 
         if (strcmp(op, "alloc") == 0) {
             if (sscanf(cursor, "%*s %d %zu", &id, &a) != 2 || !valid_id(id) || slots[id].live) {
                 fclose(input); return fail("trace", line, "invalid_alloc");
             }
-            void *ptr = allocator_malloc(a);
+            unsigned char *ptr = allocator_malloc(a);
             if (!ptr) { fclose(input); return fail("allocation", line, "unexpected_null"); }
-            slots[id] = (slot_t){(unsigned char *)ptr, a, 1};
+            slots[id] = (slot_t){ptr, a, 1};
             fill_bytes(id);
         } else if (strcmp(op, "calloc") == 0) {
-            if (sscanf(cursor, "%*s %d %zu %zu", &id, &a, &b) != 3 ||
-                !valid_id(id) || slots[id].live || (b != 0 && a > SIZE_MAX / b)) {
+            if (sscanf(cursor, "%*s %d %zu %zu", &id, &a, &b) != 3 || !valid_id(id) ||
+                slots[id].live || (b != 0 && a > SIZE_MAX / b) || a * b == 0) {
                 fclose(input); return fail("trace", line, "invalid_calloc");
             }
             size_t bytes = a * b;
             unsigned char *ptr = allocator_calloc(a, b);
             if (!ptr) { fclose(input); return fail("allocation", line, "unexpected_null"); }
             for (size_t i = 0; i < bytes; ++i) {
-                if (ptr[i] != 0) { fclose(input); return fail("calloc-zero", line, "nonzero_byte"); }
+                if (ptr[i] != 0) { fclose(input); return fail("calloc-zero", line, "nonzero_payload"); }
             }
             slots[id] = (slot_t){ptr, bytes, 1};
             fill_bytes(id);
@@ -133,17 +126,29 @@ int main(int argc, char **argv) {
             size_t preserved = slots[id].requested < a ? slots[id].requested : a;
             unsigned char *ptr = allocator_realloc(slots[id].ptr, a);
             if (a == 0) {
-                if (ptr != NULL) { fclose(input); return fail("realloc-zero", line, "expected_null"); }
+                if (ptr) { fclose(input); return fail("realloc-zero", line, "expected_null"); }
                 slots[id] = (slot_t){0};
             } else {
                 if (!ptr) { fclose(input); return fail("allocation", line, "realloc_unexpected_null"); }
                 for (size_t i = 0; i < preserved; ++i) {
                     if (ptr[i] != pattern(id, i)) {
-                        fclose(input); return fail("realloc-preservation", line, "old_payload_not_preserved");
+                        fclose(input); return fail("realloc-preservation", line, "old_payload_changed");
                     }
                 }
                 slots[id] = (slot_t){ptr, a, 1};
                 fill_bytes(id);
+            }
+        } else if (strcmp(op, "expect_null_realloc") == 0) {
+            if (sscanf(cursor, "%*s %d %zu", &id, &a) != 2 || !valid_id(id) || !slots[id].live) {
+                fclose(input); return fail("trace", line, "invalid_expect_null_realloc");
+            }
+            if (!check_bytes(id)) { fclose(input); return fail("payload-corruption", line, "before_failed_realloc"); }
+            void *original = slots[id].ptr;
+            if (allocator_realloc(original, a) != NULL) {
+                fclose(input); return fail("failure-atomicity", line, "realloc_should_fail");
+            }
+            if (slots[id].ptr != original || !check_bytes(id)) {
+                fclose(input); return fail("failure-atomicity", line, "old_allocation_changed");
             }
         } else if (strcmp(op, "free") == 0) {
             if (sscanf(cursor, "%*s %d", &id) != 1 || !valid_id(id) || !slots[id].live) {
@@ -160,14 +165,21 @@ int main(int argc, char **argv) {
             if (sscanf(cursor, "%*s %zu %zu", &a, &b) != 2 || allocator_calloc(a, b) != NULL) {
                 fclose(input); return fail("calloc-overflow", line, "calloc_should_return_null");
             }
+        } else if (strcmp(op, "reset_probes") == 0) {
+            allocator_reset_probe_count();
+        } else if (strcmp(op, "expect_probes_le") == 0) {
+            if (sscanf(cursor, "%*s %zu", &a) != 1 || allocator_probe_count() > a) {
+                fclose(input); return fail("search-budget", line, "too_many_free_list_probes");
+            }
         } else if (strcmp(op, "check") != 0) {
             fclose(input); return fail("trace", line, "unknown_operation");
         }
 
         int status = validate_all(line);
-        if (status != 0) { fclose(input); return status; }
+        if (status) { fclose(input); return status; }
     }
     fclose(input);
-    printf("RESULT PASS trace=%s\n", argv[1]);
+    printf("RESULT PASS trace=%s operations=%zu probes=%zu\n",
+           argv[1], operation_count, allocator_probe_count());
     return 0;
 }

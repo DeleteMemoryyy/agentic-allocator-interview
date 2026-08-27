@@ -1,5 +1,4 @@
-.DS_Store
-*.o
-runner
 build/
-__pycache__/
+*.dSYM/
+*.o
+.DS_Store

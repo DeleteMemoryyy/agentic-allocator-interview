@@ -1,6 +1,5 @@
-# API edges that are part of the declared contract.
 expect_null_alloc 18446744073709551615
 expect_null_calloc 18446744073709551615 2
-alloc 0 24
+calloc 0 7 9
 realloc 0 0
 check

@@ -1,52 +1,50 @@
-# Heap Guardian：Agent 时代的 Allocator 工程面试
+# Agentic Allocator Incident V2
 
-这是一道 60 分钟、允许使用异步 Coding Agent 的系统工程题。候选人不需要从零实现 `malloc`；你会接手一个公开测试全绿、但线上偶发 heap corruption 的 allocator，并负责定位错误假设、审查 Agent 产出、构造独立反例和完成私测纠错。
+一场 60 分钟、允许使用异步 Coding Agent 的系统工程面试。你要修复一个固定堆 allocator 的状态一致性问题，补全独立 heap checker，并提交一个不超过 40 步、能区分正确实现与多种“看似合理修复”的反例 trace。
 
-仓库只包含候选人可见材料。隐藏测试、参考解和面试官答案不在这里。
+这不是从零实现 malloc，也不是比拼手写速度。我们看的是：如何拆任务给 Agent、如何 Review 生成代码、如何建立跨表示 invariant、如何用反例纠错，以及是否能对最终结果负责。
 
-## 开始面试
+## 开始前
 
-**不要 Fork，也不要直接向本公开仓库提交 PR。**公开仓库上的分支和 PR 都是公开的。
+请不要 Fork 或向本公开仓库提交解答。使用下面的模板链接创建一个**候选人自己拥有的 Private Repository**：
 
-点击下面的链接，从模板创建一个属于你的 **Private Repository**：
+<https://github.com/new?template_owner=DeleteMemoryyy&template_name=agentic-allocator-interview&visibility=private>
 
-[Create private interview repository](https://github.com/new?template_owner=DeleteMemoryyy&template_name=agentic-allocator-interview&visibility=private)
+然后：
 
-随后阅读：
+1. 邀请面试官 GitHub 账号 `DeleteMemoryyy` 为 collaborator；
+2. 从 `main` 创建 `solution` 分支；
+3. 在你的私有仓库内创建 `solution -> main` 的 Draft PR；
+4. 在 25 分钟和最终提交时分别 push commit，并把两个 SHA 写进 PR 描述。
 
-1. [完整题目 TASK.md](TASK.md)
-2. [私有 PR 提交流程 SUBMISSION.md](SUBMISSION.md)
-3. 修改 `allocator.c`、`candidate.trace` 和 `decision.md`
+完整规则见 [TASK.md](TASK.md)，提交步骤见 [SUBMISSION.md](SUBMISSION.md)。
 
-## 本地公开验证
+## 本地验证
 
-环境要求：macOS/Linux、C11 compiler；脚本默认使用 `clang`，也可以通过 `CC` 指定编译器。
+环境只需要 macOS/Linux、`clang` 或 `cc`、POSIX shell，不需要 Docker 或额外依赖：
 
 ```bash
 ./verify-public.sh
 ```
 
-公开验证会启用 AddressSanitizer 和 UndefinedBehaviorSanitizer。Starter 应当通过全部公开测试；这只证明环境正常，不代表题目已经完成。
+Starter 会通过公开测试；这只证明接口基线可运行，不表示题目已完成。隐藏判题会额外检查状态一致性、checker 完备性、随机压力、搜索预算，以及你的 trace 能击穿多少个隐藏 mutation。
 
-## 时间盒
-
-- 0–5 分钟：阅读合同，建立 allocator invariant。
-- 5–25 分钟：最多使用两个异步 Coding Agent，审查结果并冻结 Phase A。
-- 25–28 分钟：提交 Draft PR；面试官运行私测，只返回失败类别。
-- 28–43 分钟：基于反馈纠错并推送 Final commit。
-- 43–47 分钟：最终私测。
-- 47–60 分钟：候选人主导代码 Review 和设计复盘。
-
-## 交付物
-
-Private PR 中只评审：
+## 允许修改
 
 - `allocator.c`
+- `heap_checker.c`
 - `candidate.trace`
 - `decision.md`
 
-GitHub Actions 会在候选人的 Private PR 上自动运行公开测试。私有 verifier 由面试官独立运行，不会进入候选人的仓库。
+其他文件视为合同。隐藏判题使用干净副本，不接受对 runner、头文件或测试脚本的修改。
 
-## 许可与用途
+## 时间盒
 
-代码以 MIT License 发布。这是面试原型，不是生产级通用 allocator。
+- 0–5 分钟：读合同、画状态模型、拆 Agent 任务；
+- 5–25 分钟：实现 Phase A；25:00 冻结并提交 SHA；
+- 25–28 分钟：运行一次 Phase A 隐藏判题，获得最多两个失败维度与 mutation 击杀数；
+- 28–43 分钟：纠错并提交 Final SHA；
+- 43–47 分钟：最终判题；
+- 47–60 分钟：人工 Review 与追问。
+
+同时最多运行两个 Coding Agent。你可以让它们异步探索，但最终合并、验证和解释必须由你完成。
