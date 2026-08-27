@@ -1,35 +1,35 @@
-# Delivery Handoff
+# 交付说明
 
-## Outcome
+## 交付结论
 
-TODO: state the current merge recommendation and delivered behavior.
+待填写。
 
-## Accepted Contract
+## 已接受合同
 
-TODO: list the outcomes and hard constraints this snapshot claims to satisfy.
+待填写。
 
-## Protocol Decision
+## 关键决策
 
-TODO: name the selected deliveryProfile, the Public Seam it changes, the rejected profile, and why the selected tradeoff is acceptable.
+待填写。
 
-## Changes
+## 变更
 
-| Area | Change | Why |
+| 区域 | 变更 | 原因 |
 |---|---|---|
-| TODO | TODO | TODO |
+| 待填写 | 待填写 | 待填写 |
 
-## Evidence
+## 证据
 
-| Claim | Command or Test | Result |
+| 结论 | 命令或测试 | 结果 |
 |---|---|---|
-| TODO | TODO | TODO |
+| 待填写 | 待填写 | 待填写 |
 
-## Residual Risks
+## 剩余风险
 
-| Risk or Unproven Assumption | Impact | Next Verification |
+| 风险或未验证假设 | 影响 | 下一步验证 |
 |---|---|---|
-| TODO | TODO | TODO |
+| 待填写 | 待填写 | 待填写 |
 
-## Rollback
+## 回滚
 
-TODO: describe the smallest safe reversal.
+待填写。

@@ -1,6 +1,6 @@
 class IdempotencyConflict(ValueError):
-    """The same scoped key was reused for a different logical request."""
+    """同一范围内的 key 被用于不同的逻辑请求。"""
 
 
 class DispatchUnavailable(RuntimeError):
-    """The job is durable but could not be dispatched during this attempt."""
+    """任务已持久化，但本次尝试未能派发。"""

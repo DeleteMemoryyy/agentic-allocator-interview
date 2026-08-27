@@ -1,29 +1,27 @@
-## Frozen delivery
+## 冻结状态
 
-- [ ] This PR head is the minute-20 frozen snapshot.
-- [ ] No code, tests, metadata, or Handoff were changed after freeze.
-- `submission.zip` attachment or locator (optional):
+- [ ] 当前 PR head 是第 20 分钟冻结的快照。
+- [ ] 冻结后没有修改代码、测试、元数据或交付说明。
+- `submission.zip` 附件或定位信息（可选）：
 
-## Delivery decision
+## 交付结论
 
-- Declared `deliveryProfile`:
-- Merge recommendation:
-- Public Seam changed:
-- Rejected alternative and accepted cost:
+- 是否建议合并：
+- 最重要的关键决策：
 
-## Verification
+## 验证
 
 - [ ] `sh ./verify.sh`
-- Test count/result:
-- Candidate-added discriminating evidence:
+- 测试数量与结果：
+- 候选人新增的区分性证据：
 
-## Agent workflow metadata
+## 智能体工作流元数据
 
-- Primary tool/model:
-- Sub-agents used:
-- Maximum concurrency:
+- 主要工具/模型：
+- 是否使用子智能体：
+- 最大并发数：
 
-## Reviewer notes
+## 审阅提示
 
-- Most important residual risk:
-- Smallest safe rollback:
+- 最重要的剩余风险：
+- 最小安全回滚：

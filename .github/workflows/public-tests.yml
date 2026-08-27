@@ -1,4 +1,4 @@
-name: public-verifier
+name: 公开验证
 
 on:
   push:
@@ -13,5 +13,5 @@ jobs:
     timeout-minutes: 2
     steps:
       - uses: actions/checkout@v4
-      - name: Run public verifier
+      - name: 运行公开验证
         run: sh ./verify.sh

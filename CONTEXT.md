@@ -1,30 +1,21 @@
-# Domain Context
+# 最小领域背景
 
-## Glossary
+## 逻辑请求（Logical Request）
 
-### Logical Request
-A caller operation identified by `(tenant_id, idempotency_key)` and one payload.
+由 `(tenant_id, idempotency_key)` 和一个 `payload` 共同标识的一次调用方操作。
 
-### Admission Record
-The durable `JobRecord` representing one Logical Request.
+## 任务记录（Job Record）
 
-### Dispatch Attempt
-One call across the dispatcher boundary that may or may not create an external side effect.
+系统为一次逻辑请求保存的记录。公开兼容字段见 `workspace/jobrunner/models.py`。
 
-### Definitive Rejection
-An outcome proving that a Dispatch Attempt produced no external side effect.
+## 包装器（Wrapper）
 
-### Ambiguous Outcome
-An outcome where the caller cannot prove whether the external system accepted the Dispatch Attempt.
+`JobService` 或 `JobStore` 的一个进程内实例。包装器可以被销毁、重建，多个包装器也可能同时存在。
 
-### Delivery Token
-A stable identity that an idempotent downstream can use to collapse repeated Dispatch Attempts into one external effect.
+## 派发尝试（Dispatch Attempt）
 
-### Reconciliation Evidence
-An authoritative observation that resolves an Ambiguous Outcome as accepted or not accepted.
+跨过派发器接口的一次调用。它可能产生队列侧的外部副作用。
 
-### Delivery Profile
-The release-level protocol selected for recovering from an Ambiguous Outcome.
+## 确定拒绝（Definitive Rejection）
 
-### Public Seam
-An Interface shared with an adjacent owner. This task has a caller-facing service seam and a dispatcher-facing integration seam.
+能够证明某次派发尝试没有产生外部副作用的结果。阶段 1 中的 `DispatchError` 具有这一语义。

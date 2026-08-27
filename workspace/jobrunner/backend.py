@@ -4,10 +4,10 @@ from .models import JobRecord
 
 
 class MemoryJobBackend:
-    """Process-local stand-in for durable database state.
+    """持久数据库状态的进程内替身。
 
-    The backend object can outlive repository and service wrappers during tests.
-    Production adapters would map this state to database rows and indexes.
+    测试中，后端对象可以比仓库和服务包装器存活更久。
+    生产适配器应把这些状态映射到数据库行和索引。
     """
 
     def __init__(self) -> None:

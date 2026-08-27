@@ -1,16 +1,14 @@
-# Prompt for the Delivery Handoff
+# 生成交付说明的提示词
 
-Inspect the actual submitted workspace, the task contract, every stage update you received, and the latest verification results. Then replace `HANDOFF.md` with an accurate delivery handoff using its existing headings.
+检查实际提交的工作区、全部已解锁阶段信息和最近一次验证结果，然后沿用 `HANDOFF.md` 的现有标题替换占位文本。
 
-Rules:
+交付说明必须：
 
-- State whether the delivery is ready to merge; do not assume that passing public tests is sufficient.
-- Read `submission.json.deliveryProfile`; name that exact profile and keep every claim consistent with it.
-- Explain which Public Seam changed, which profile was rejected, and the operational cost of the selected guarantee.
-- Describe only behavior present in the submitted snapshot.
-- Tie every positive claim to a reproducible test or command.
-- If common or selected-profile behavior is incomplete, say so explicitly and describe its impact. Do not claim both profiles merely because helpers for both exist.
-- Distinguish an unverified risk from a known failure.
-- Give the smallest safe rollback, not a generic statement such as "revert if needed".
-- Do not include Agent transcripts, prompts, self-evaluation, or invented Phase feedback.
-- Keep the document at or below 800 whitespace-delimited words and 8,000 characters.
+- 给出是否建议合并的明确结论；
+- 只描述冻结快照中真实存在的行为和决策；
+- 为正向结论附上刚刚实际运行、可以重放的命令或测试结果；
+- 区分已知失败与尚未验证的风险；
+- 给出最小且安全的回滚动作；
+- 全文不超过 800 个以空白分隔的词，且不超过 8,000 个字符。
+
+不要包含智能体对话、提示词、自我评分或无法从快照和执行结果支持的结论。

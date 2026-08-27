@@ -5,7 +5,7 @@ from .models import JobRecord
 
 
 class JobStore:
-    """In-memory stand-in for the repository that survives service recreation."""
+    """可跨服务重建存活的进程内仓库替身。"""
 
     def __init__(self, backend: MemoryJobBackend | None = None) -> None:
         self._backend = backend or MemoryJobBackend()

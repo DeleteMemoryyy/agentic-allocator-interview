@@ -1,8 +1,8 @@
 {
-  "schemaVersion": 1,
-  "taskId": "durable-dispatch-protocol-v2",
-  "baseRevision": "takeover-pr-v2",
-  "deliveryProfile": "undecided",
+  "schemaVersion": 2,
+  "taskId": "durable-dispatch-protocol-v3",
+  "baseRevision": "takeover-pr-v3",
+  "assignmentId": "public-template",
   "tooling": {
     "primary": "fill-before-submit",
     "model": "fill-before-submit",

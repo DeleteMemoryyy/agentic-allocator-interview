@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create a transport-neutral submission snapshot."""
+"""创建与传输方式无关的提交快照。"""
 
 from __future__ import annotations
 
@@ -11,14 +11,43 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 OUTPUT = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "submission.zip"
 EXCLUDED_PARTS = {".git", "__pycache__", ".pytest_cache", "build", "dist"}
+HANDOFF_HEADINGS = (
+    "## 交付结论",
+    "## 已接受合同",
+    "## 关键决策",
+    "## 变更",
+    "## 证据",
+    "## 剩余风险",
+    "## 回滚",
+)
 
 
 def validate() -> None:
     metadata = json.loads((ROOT / "submission.json").read_text())
-    if metadata.get("schemaVersion") != 1 or metadata.get("taskId") != "durable-dispatch-protocol-v2":
-        raise SystemExit("submission.json has an unsupported schema or taskId")
+    if metadata.get("schemaVersion") != 2 or metadata.get("taskId") != "durable-dispatch-protocol-v3":
+        raise SystemExit("submission.json 的 schemaVersion 或 taskId 不受支持")
+    if metadata.get("assignmentId") in {None, "", "public-template"}:
+        raise SystemExit("缺少本场 assignmentId；请先应用面试官提供的 session overlay")
+    tooling = metadata.get("tooling", {})
+    if (
+        not isinstance(tooling, dict)
+        or tooling.get("primary") in {None, "", "fill-before-submit"}
+        or tooling.get("model") in {None, "", "fill-before-submit"}
+        or not isinstance(tooling.get("subagentsUsed"), bool)
+        or type(tooling.get("maxConcurrentAgents")) is not int
+        or tooling["maxConcurrentAgents"] < 1
+    ):
+        raise SystemExit("请先按本场实际情况填写 submission.json.tooling")
     if not (ROOT / "HANDOFF.md").is_file() or not (ROOT / "workspace").is_dir():
-        raise SystemExit("HANDOFF.md and workspace/ are required")
+        raise SystemExit("必须包含 HANDOFF.md 和 workspace/")
+    handoff = (ROOT / "HANDOFF.md").read_text(encoding="utf-8")
+    missing = [heading for heading in HANDOFF_HEADINGS if heading not in handoff]
+    if missing:
+        raise SystemExit("HANDOFF.md 缺少标题：" + "、".join(missing))
+    if "待填写" in handoff or "TODO" in handoff:
+        raise SystemExit("HANDOFF.md 仍包含占位文本")
+    if len(handoff.split()) > 800 or len(handoff) > 8000:
+        raise SystemExit("HANDOFF.md 超过 800 个空白分词或 8,000 个字符")
 
 
 def included(path: Path) -> bool:
