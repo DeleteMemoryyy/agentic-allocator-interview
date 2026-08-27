@@ -1,0 +1,11 @@
+# Public realloc cases deliberately avoid the small-splinter boundary.
+alloc 0 160
+alloc 1 128
+realloc 0 64
+free 1
+realloc 0 1024
+alloc 2 80
+realloc 2 4096
+free 0
+free 2
+check
