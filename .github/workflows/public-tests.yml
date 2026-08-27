@@ -1,0 +1,24 @@
+name: public-verifier
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-verifier-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  public-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout submission
+        uses: actions/checkout@v4
+      - name: Run public allocator verifier
+        env:
+          CC: clang
+        run: ./verify-public.sh
